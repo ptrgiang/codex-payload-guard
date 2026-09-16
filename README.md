@@ -18,6 +18,7 @@ Token usage can look healthy while multimodal history, large tool outputs, and e
 - compare two snapshots and calculate byte-growth velocity
 - show live growth between changes while watching a rollout
 - run deterministic benchmark scenarios for detector regression and early-warning evidence
+- export auditable benchmark evidence as JSON and Markdown
 - emit machine-readable JSON
 - remain read-only: no rollout, SQLite, or workspace mutation
 
@@ -161,6 +162,34 @@ For risk scenarios, the harness records the first expected detection and reports
 
 See [`benchmarks/README.md`](benchmarks/README.md) for the scenario model and evaluation rules.
 
+## Benchmark evidence
+
+Generate an auditable full-profile evidence bundle:
+
+```bash
+cpg benchmark --profile full --report-dir benchmark-results
+```
+
+This writes:
+
+```text
+benchmark-results/
+├── benchmark-results.json
+└── benchmark-results.md
+```
+
+The JSON evidence envelope records the report schema version, tool version, Python/platform metadata, measurement model, complete suite results, and a SHA-256 fingerprint of the packaged benchmark scenario manifests. The fingerprint makes it possible to verify that two runs used the same scenario definitions even when runtime measurements differ by machine.
+
+The Markdown report summarizes:
+
+- detection coverage
+- failed and false-positive scenarios
+- median early-warning lead
+- first detection and peak payload per scenario
+- analysis runtime per scenario
+
+GitHub Actions includes a **Benchmark Evidence** workflow that can be run manually and also runs when a release is published. It executes the `full` profile, adds the Markdown report to the workflow summary, uploads both evidence files as a workflow artifact, and attaches them to a published GitHub release.
+
 ## Safety model
 
 Payload Guard is read-only by design. It does not:
@@ -179,6 +208,7 @@ The tool reports `observed`, `inferred`, and `unknown` signals separately so est
 python -m pip install -e ".[dev]"
 pytest
 ruff check .
+cpg benchmark --profile ci --report-dir benchmark-ci
 ```
 
 ## License

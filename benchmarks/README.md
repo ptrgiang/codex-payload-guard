@@ -81,6 +81,31 @@ reference threshold - payload at first expected detection
 
 A positive lead means the harness detected the expected risk before the reference threshold.
 
+## Evidence bundles
+
+Generate both machine-readable and human-readable evidence:
+
+```bash
+cpg benchmark --profile full --report-dir benchmark-results
+```
+
+The command writes `benchmark-results.json` and `benchmark-results.md`.
+
+The JSON envelope includes:
+
+- evidence schema version,
+- tool version,
+- Python implementation and platform,
+- measurement model,
+- a SHA-256 fingerprint of all packaged scenario manifests,
+- complete suite and step results.
+
+The scenario fingerprint is computed from canonical JSON for the ordered manifest catalog. If the fingerprint matches between two reports, the scenario definitions match even if runtime timing differs.
+
+The Markdown report is intended for release notes, GitHub Actions summaries, and human review. It reports detection coverage, false-positive scenarios, median early-warning lead, first detection payload, peak payload, and analysis runtime.
+
+The `.github/workflows/benchmark-evidence.yml` workflow runs the full profile manually or on a published release. Release-triggered runs attach both evidence files to the GitHub release.
+
 ## Privacy
 
 Scenario payloads are generated from repeated placeholder characters. The suite contains no prompts, source code, image bytes, workspace paths, or user session data.

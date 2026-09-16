@@ -24,6 +24,10 @@ jobs:
         run: pytest
       - name: CLI smoke test
         run: cpg --help
-      - name: Benchmark harness
+      - name: Benchmark harness and evidence
         if: matrix.python-version == '3.12'
-        run: cpg benchmark --profile ci --json > benchmark-ci.json
+        run: |
+          cpg benchmark --profile ci --report-dir benchmark-ci
+          test -s benchmark-ci/benchmark-results.json
+          test -s benchmark-ci/benchmark-results.md
+          python -m json.tool benchmark-ci/benchmark-results.json > /dev/null
