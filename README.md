@@ -17,6 +17,7 @@ Token usage can look healthy while multimodal history, large tool outputs, and e
 - capture portable measurement snapshots
 - compare two snapshots and calculate byte-growth velocity
 - show live growth between changes while watching a rollout
+- run deterministic benchmark scenarios for detector regression and early-warning evidence
 - emit machine-readable JSON
 - remain read-only: no rollout, SQLite, or workspace mutation
 
@@ -35,6 +36,7 @@ cpg scan
 cpg inspect --latest
 cpg watch --latest
 cpg explain MEDIA_DOMINATED_CONTEXT
+cpg benchmark
 ```
 
 ## Measure growth over time
@@ -115,6 +117,49 @@ Growth detectors:
 - `PAYLOAD_GROWTH_SPIKE`
 - `MEDIA_GROWTH_DOMINANT`
 - `COMPACTION_REDUCED_PAYLOAD`
+
+## Deterministic benchmark harness
+
+Run the built-in benchmark suite:
+
+```bash
+cpg benchmark
+```
+
+Inspect one scenario step by step:
+
+```bash
+cpg benchmark image-burst --verbose
+```
+
+Use the larger profile manually:
+
+```bash
+cpg benchmark --profile full
+```
+
+For CI or tooling:
+
+```bash
+cpg benchmark --profile ci --json
+```
+
+The harness replays deterministic **active payload projections** built from synthetic text, inline media, tool output, token-usage records, malformed JSONL, and compaction events. It never needs private Codex transcripts or network access.
+
+The default scenarios cover:
+
+- healthy text-only sessions
+- repeated inline-image bursts
+- large tool-output floods
+- steady payload growth
+- single-step payload spikes
+- compaction recovery
+- high token-cache reuse with a large byte payload
+- malformed rollout records
+
+For risk scenarios, the harness records the first expected detection and reports the byte lead before the 24 MiB high-risk reference threshold. These are benchmark estimates, not exact Codex wire-request sizes.
+
+See [`benchmarks/README.md`](benchmarks/README.md) for the scenario model and evaluation rules.
 
 ## Safety model
 

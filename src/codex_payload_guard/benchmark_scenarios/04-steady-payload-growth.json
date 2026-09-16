@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "order": 4,
+  "name": "steady-payload-growth",
+  "description": "Moderate repeated growth should trigger rising-growth warning without a spike.",
+  "steps": [
+    {"kind": "text", "ci_bytes": 1048576, "full_bytes": 2097152},
+    {"kind": "text", "ci_bytes": 4194304, "full_bytes": 5242880},
+    {"kind": "text", "ci_bytes": 4194304, "full_bytes": 5242880},
+    {"kind": "text", "ci_bytes": 4194304, "full_bytes": 5242880}
+  ],
+  "expect": {
+    "must_detect": ["PAYLOAD_GROWTH_RISING"],
+    "must_not_detect": ["PAYLOAD_GROWTH_SPIKE", "MEDIA_GROWTH_DOMINANT"],
+    "before_payload_bytes": 25165824
+  }
+}

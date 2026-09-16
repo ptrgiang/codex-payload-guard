@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "order": 6,
+  "name": "compaction-recovery",
+  "description": "An active payload projection that compacts should show a material reduction.",
+  "steps": [
+    {"kind": "text", "ci_bytes": 8388608, "full_bytes": 12582912},
+    {"kind": "text", "ci_bytes": 10485760, "full_bytes": 18874368},
+    {"kind": "compact", "ci_bytes": 2097152, "full_bytes": 3145728}
+  ],
+  "expect": {
+    "must_detect": ["COMPACTION_REDUCED_PAYLOAD"],
+    "must_not_detect": []
+  }
+}

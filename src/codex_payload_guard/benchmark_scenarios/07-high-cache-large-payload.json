@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "order": 7,
+  "name": "high-cache-large-payload",
+  "description": "High cached-token reuse should not hide a large serialized payload.",
+  "steps": [
+    {"kind": "text", "ci_bytes": 17039360, "full_bytes": 23068672},
+    {
+      "kind": "token_usage",
+      "input_tokens": 100000,
+      "cached_input_tokens": 95000,
+      "total_tokens": 100500
+    }
+  ],
+  "expect": {
+    "must_detect": ["HIGH_BYTES_HIGH_CACHE"],
+    "must_not_detect": [],
+    "before_payload_bytes": 25165824
+  }
+}

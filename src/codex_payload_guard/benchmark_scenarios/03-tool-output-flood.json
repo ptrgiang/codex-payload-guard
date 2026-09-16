@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "order": 3,
+  "name": "tool-output-flood",
+  "description": "Large tool results should be attributed to tool output rather than media.",
+  "steps": [
+    {"kind": "text", "ci_bytes": 1048576, "full_bytes": 2097152},
+    {"kind": "tool_output", "ci_bytes": 4456448, "full_bytes": 8912896},
+    {"kind": "tool_output", "ci_bytes": 4456448, "full_bytes": 8912896}
+  ],
+  "expect": {
+    "must_detect": ["OVERSIZED_TOOL_OUTPUT"],
+    "must_not_detect": ["MEDIA_GROWTH_DOMINANT", "MEDIA_DOMINATED_CONTEXT"],
+    "before_payload_bytes": 25165824
+  }
+}

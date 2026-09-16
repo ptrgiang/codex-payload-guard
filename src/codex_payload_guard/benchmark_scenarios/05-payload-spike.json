@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "order": 5,
+  "name": "payload-spike",
+  "description": "A single large addition should trigger the spike detector early.",
+  "steps": [
+    {"kind": "text", "ci_bytes": 1048576, "full_bytes": 2097152},
+    {"kind": "text", "ci_bytes": 9437184, "full_bytes": 14680064}
+  ],
+  "expect": {
+    "must_detect": ["PAYLOAD_GROWTH_SPIKE"],
+    "must_not_detect": ["MEDIA_GROWTH_DOMINANT"],
+    "before_payload_bytes": 25165824
+  }
+}
