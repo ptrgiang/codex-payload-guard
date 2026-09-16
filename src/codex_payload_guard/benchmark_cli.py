@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -10,6 +11,7 @@ from rich.table import Table
 
 from .benchmark import run_benchmark_suite
 from .benchmark_models import BenchmarkResult, BenchmarkSuiteResult
+from .benchmark_report import write_benchmark_evidence
 
 
 def _default_fmt_bytes(value: int | float) -> str:
@@ -110,10 +112,20 @@ def register_benchmark(
             bool,
             typer.Option("--verbose", "-v", help="Show the step-by-step trace."),
         ] = False,
+        report_dir: Annotated[
+            Path | None,
+            typer.Option(
+                "--report-dir",
+                help="Write auditable benchmark-results.json and benchmark-results.md files.",
+            ),
+        ] = None,
     ) -> None:
         """Run deterministic payload-risk benchmark scenarios."""
         try:
             suite = run_benchmark_suite(profile=profile, scenario=scenario)
+            report_paths = None
+            if report_dir is not None:
+                report_paths = write_benchmark_evidence(suite, report_dir)
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             raise typer.BadParameter(str(exc)) from exc
 
@@ -121,6 +133,10 @@ def register_benchmark(
             console.print_json(json.dumps(suite.to_dict()))
         else:
             _render_suite(console, suite, verbose=verbose, fmt_bytes=fmt_bytes)
+            if report_paths is not None:
+                json_path, markdown_path = report_paths
+                console.print(f"\nEvidence JSON: [bold]{json_path}[/bold]")
+                console.print(f"Evidence Markdown: [bold]{markdown_path}[/bold]")
 
         if not suite.passed:
             raise typer.Exit(code=1)
