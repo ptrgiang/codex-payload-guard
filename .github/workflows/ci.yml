@@ -23,7 +23,9 @@ jobs:
       - name: Pytest
         run: pytest
       - name: CLI smoke test
-        run: cpg --help
+        run: |
+          cpg --help
+          cpg --version
       - name: Benchmark harness and evidence
         if: matrix.python-version == '3.12'
         run: |
@@ -31,3 +33,30 @@ jobs:
           test -s benchmark-ci/benchmark-results.json
           test -s benchmark-ci/benchmark-results.md
           python -m json.tool benchmark-ci/benchmark-results.json > /dev/null
+      - name: Build distributions
+        if: matrix.python-version == '3.12'
+        run: python -m build
+      - name: Validate release package
+        if: matrix.python-version == '3.12'
+        run: |
+          python -m twine check dist/*
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          wheel = next(Path("dist").glob("*.whl"))
+          with ZipFile(wheel) as archive:
+              names = set(archive.namelist())
+          required = {
+              "codex_payload_guard/benchmark_scenarios/01-normal-text.json",
+              "codex_payload_guard/benchmark_scenarios/08-malformed-rollout.json",
+          }
+          missing = required - names
+          if missing:
+              raise SystemExit(f"wheel missing benchmark manifests: {sorted(missing)}")
+          PY
+          version="$(python -c 'import codex_payload_guard; print(codex_payload_guard.__version__)')"
+          python -m venv package-smoke
+          package-smoke/bin/python -m pip install dist/*.whl
+          test "$(package-smoke/bin/cpg --version)" = "codex-payload-guard ${version}"
+          package-smoke/bin/cpg benchmark --profile ci --json > /dev/null

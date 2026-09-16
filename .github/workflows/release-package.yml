@@ -1,0 +1,40 @@
+name: Release Package
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-attach:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install release tooling
+        run: python -m pip install -e ".[dev]"
+      - name: Validate release tag
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version="$(python -c 'import codex_payload_guard; print(codex_payload_guard.__version__)')"
+          test "v${version}" = "${RELEASE_TAG}"
+      - name: Build distributions
+        run: python -m build
+      - name: Check distributions
+        run: python -m twine check dist/*
+      - name: Smoke test wheel
+        run: |
+          version="$(python -c 'import codex_payload_guard; print(codex_payload_guard.__version__)')"
+          python -m venv release-smoke
+          release-smoke/bin/python -m pip install dist/*.whl
+          test "$(release-smoke/bin/cpg --version)" = "codex-payload-guard ${version}"
+          release-smoke/bin/cpg benchmark --profile ci --json > /dev/null
+      - name: Attach distributions to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" dist/* --clobber
