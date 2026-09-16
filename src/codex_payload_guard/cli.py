@@ -9,6 +9,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from . import __version__
 from .analyzer import analyze_rollout
 from .benchmark_cli import register_benchmark
 from .comparison import (
@@ -24,6 +25,27 @@ from .models import GrowthComparison
 app = typer.Typer(help="Local-first byte-budget watchdog for OpenAI Codex sessions.")
 console = Console()
 _MIB = 1024 * 1024
+
+
+def _version_callback(value: bool) -> None:
+    if value:
+        typer.echo(f"codex-payload-guard {__version__}")
+        raise typer.Exit()
+
+
+@app.callback()
+def main(
+    version: Annotated[
+        bool,
+        typer.Option(
+            "--version",
+            callback=_version_callback,
+            is_eager=True,
+            help="Show version and exit.",
+        ),
+    ] = False,
+) -> None:
+    """Codex Payload Guard."""
 
 
 def _fmt_bytes(value: int | float) -> str:
