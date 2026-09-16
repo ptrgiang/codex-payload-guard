@@ -7,6 +7,13 @@ from typing import Any, Literal
 Severity = Literal["low", "medium", "high", "critical"]
 SignalKind = Literal["observed", "inferred", "unknown"]
 
+_SEVERITY_ORDER: dict[Severity, int] = {
+    "low": 1,
+    "medium": 2,
+    "high": 3,
+    "critical": 4,
+}
+
 
 @dataclass(slots=True)
 class Finding:
@@ -52,10 +59,45 @@ class Snapshot:
         total = self.estimated_payload_bytes
         return 0.0 if total == 0 else self.media_bytes / total
 
+    @property
+    def risk_label(self) -> str:
+        if not self.findings:
+            return "LOW"
+        severity = max(self.findings, key=lambda item: _SEVERITY_ORDER[item.severity]).severity
+        return severity.upper()
+
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
         data["path"] = str(self.path)
         data["estimated_payload_bytes"] = self.estimated_payload_bytes
         data["media_share"] = self.media_share
+        data["risk"] = self.risk_label
+        data["findings"] = [item.to_dict() for item in self.findings]
+        return data
+
+
+@dataclass(slots=True)
+class GrowthComparison:
+    before_captured_at: str
+    after_captured_at: str
+    before_risk: str
+    after_risk: str
+    elapsed_seconds: float
+    payload_delta_bytes: int
+    text_delta_bytes: int
+    media_delta_bytes: int
+    tool_output_delta_bytes: int
+    other_delta_bytes: int
+    records_delta: int
+    media_items_delta: int
+    compactions_delta: int
+    input_tokens_delta: int | None
+    bytes_per_minute: float | None
+    bytes_per_record: float | None
+    trajectory: str
+    findings: list[Finding] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        data = asdict(self)
         data["findings"] = [item.to_dict() for item in self.findings]
         return data
