@@ -10,6 +10,7 @@ from rich.console import Console
 from rich.table import Table
 
 from .analyzer import analyze_rollout
+from .benchmark_cli import register_benchmark
 from .comparison import (
     compare_artifacts,
     compare_snapshot_files,
@@ -242,6 +243,9 @@ def explain(code: Annotated[str, typer.Argument(help="Finding code")]) -> None:
         choices = ", ".join(sorted(FINDING_HELP))
         raise typer.BadParameter(f"Unknown code. Available: {choices}")
     console.print(f"[bold]{normalized}[/bold]\n{explanation}")
+
+
+register_benchmark(app, console, _fmt_bytes)
 
 
 if __name__ == "__main__":

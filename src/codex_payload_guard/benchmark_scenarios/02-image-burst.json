@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "order": 2,
+  "name": "image-burst",
+  "description": "Repeated inline images should be attributed to media growth before the high payload threshold.",
+  "steps": [
+    {"kind": "text", "ci_bytes": 1048576, "full_bytes": 2097152},
+    {"kind": "image", "ci_bytes": 4718592, "full_bytes": 8388608},
+    {"kind": "image", "ci_bytes": 4718592, "full_bytes": 8388608}
+  ],
+  "expect": {
+    "must_detect": ["MEDIA_GROWTH_DOMINANT", "MEDIA_DOMINATED_CONTEXT"],
+    "must_not_detect": ["OVERSIZED_TOOL_OUTPUT"],
+    "before_payload_bytes": 25165824
+  }
+}

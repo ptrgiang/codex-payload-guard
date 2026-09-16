@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "order": 1,
+  "name": "normal-text",
+  "description": "Healthy text-only session should stay quiet.",
+  "steps": [
+    {"kind": "text", "ci_bytes": 524288, "full_bytes": 2097152},
+    {"kind": "text", "ci_bytes": 524288, "full_bytes": 2097152},
+    {"kind": "text", "ci_bytes": 524288, "full_bytes": 2097152},
+    {"kind": "text", "ci_bytes": 524288, "full_bytes": 2097152}
+  ],
+  "expect": {
+    "must_detect": [],
+    "must_not_detect": [
+      "PAYLOAD_SIZE_HIGH",
+      "PAYLOAD_SIZE_CRITICAL",
+      "MEDIA_DOMINATED_CONTEXT",
+      "OVERSIZED_TOOL_OUTPUT",
+      "NO_COMPACTION_LONG_SESSION",
+      "HIGH_BYTES_HIGH_CACHE",
+      "PAYLOAD_GROWTH_RISING",
+      "PAYLOAD_GROWTH_SPIKE",
+      "MEDIA_GROWTH_DOMINANT"
+    ]
+  }
+}

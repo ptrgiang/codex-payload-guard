@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "order": 8,
+  "name": "malformed-rollout",
+  "description": "Malformed JSONL should be reported without crashing the analyzer.",
+  "steps": [
+    {"kind": "text", "ci_bytes": 131072, "full_bytes": 131072},
+    {"kind": "malformed", "content": "{broken"}
+  ],
+  "expect": {
+    "must_detect": ["MALFORMED_ROLLOUT_RECORDS"],
+    "must_not_detect": ["PAYLOAD_SIZE_HIGH", "PAYLOAD_SIZE_CRITICAL"]
+  }
+}
