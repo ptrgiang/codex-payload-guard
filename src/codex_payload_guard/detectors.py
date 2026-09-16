@@ -120,4 +120,8 @@ FINDING_HELP = {
     "PAYLOAD_SIZE_CRITICAL": "Observed content crossed the default 48 MiB critical threshold.",
     "HIGH_BYTES_HIGH_CACHE": "High cached-token reuse does not imply a small serialized request body.",
     "MALFORMED_ROLLOUT_RECORDS": "One or more JSONL records were unreadable, so estimates are incomplete.",
+    "PAYLOAD_GROWTH_RISING": "Payload increased by at least 4 MiB between snapshots without a new compaction.",
+    "PAYLOAD_GROWTH_SPIKE": "Payload increased by at least 8 MiB between snapshots without a new compaction.",
+    "MEDIA_GROWTH_DOMINANT": "Embedded media contributed at least 60% of positive growth between snapshots.",
+    "COMPACTION_REDUCED_PAYLOAD": "A newly observed compaction coincided with lower estimated payload bytes.",
 }

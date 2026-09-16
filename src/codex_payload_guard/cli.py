@@ -10,20 +10,36 @@ from rich.console import Console
 from rich.table import Table
 
 from .analyzer import analyze_rollout
+from .comparison import (
+    compare_artifacts,
+    compare_snapshot_files,
+    make_snapshot_artifact,
+    write_snapshot_artifact,
+)
 from .detectors import FINDING_HELP, run_detectors
 from .discovery import discover_rollouts, latest_rollout
+from .models import GrowthComparison
 
 app = typer.Typer(help="Local-first byte-budget watchdog for OpenAI Codex sessions.")
 console = Console()
 _MIB = 1024 * 1024
 
 
-def _fmt_bytes(value: int) -> str:
-    if value < 1024:
-        return f"{value} B"
-    if value < _MIB:
-        return f"{value / 1024:.1f} KiB"
-    return f"{value / _MIB:.1f} MiB"
+def _fmt_bytes(value: int | float) -> str:
+    absolute = abs(value)
+    sign = "-" if value < 0 else ""
+    if absolute < 1024:
+        return f"{sign}{absolute:.0f} B"
+    if absolute < _MIB:
+        return f"{sign}{absolute / 1024:.1f} KiB"
+    return f"{sign}{absolute / _MIB:.1f} MiB"
+
+
+def _fmt_signed_bytes(value: int | float) -> str:
+    if value == 0:
+        return "0 B"
+    prefix = "+" if value > 0 else ""
+    return f"{prefix}{_fmt_bytes(value)}"
 
 
 def _resolve(path: Path | None, latest: bool, root: Path | None) -> Path:
@@ -35,14 +51,6 @@ def _resolve(path: Path | None, latest: bool, root: Path | None) -> Path:
             raise typer.BadParameter("No Codex rollout files were found.")
         return found
     raise typer.BadParameter("Provide PATH or use --latest.")
-
-
-def _risk_label(snapshot) -> str:
-    severity_order = {"low": 1, "medium": 2, "high": 3, "critical": 4}
-    if not snapshot.findings:
-        return "LOW"
-    severity = max(snapshot.findings, key=lambda item: severity_order[item.severity]).severity
-    return severity.upper()
 
 
 def _render(snapshot) -> None:
@@ -62,12 +70,43 @@ def _render(snapshot) -> None:
         table.add_row("Input tokens", f"{snapshot.token_input:,}")
     if snapshot.cached_input is not None:
         table.add_row("Cached input", f"{snapshot.cached_input:,}")
-    table.add_row("Risk", _risk_label(snapshot))
+    table.add_row("Risk", snapshot.risk_label)
     console.print(table)
 
     if snapshot.findings:
         console.print("\n[bold]Findings[/bold]")
         for finding in snapshot.findings:
+            console.print(
+                f"[{finding.severity.upper()}] [bold]{finding.code}[/bold] — {finding.message}"
+            )
+            if finding.action:
+                console.print(f"  Action: {finding.action}")
+
+
+def _render_growth(comparison: GrowthComparison, title: str = "Payload growth") -> None:
+    table = Table(title=title, show_header=False)
+    table.add_column("Metric", style="bold")
+    table.add_column("Value")
+    table.add_row("Risk", f"{comparison.before_risk} → {comparison.after_risk}")
+    table.add_row("Trajectory", comparison.trajectory)
+    table.add_row("Payload", _fmt_signed_bytes(comparison.payload_delta_bytes))
+    table.add_row("Text", _fmt_signed_bytes(comparison.text_delta_bytes))
+    table.add_row("Embedded media", _fmt_signed_bytes(comparison.media_delta_bytes))
+    table.add_row("Tool output", _fmt_signed_bytes(comparison.tool_output_delta_bytes))
+    table.add_row("Other JSON", _fmt_signed_bytes(comparison.other_delta_bytes))
+    table.add_row("New records", f"{comparison.records_delta:+d}")
+    table.add_row("Compactions", f"{comparison.compactions_delta:+d}")
+    if comparison.input_tokens_delta is not None:
+        table.add_row("Input tokens", f"{comparison.input_tokens_delta:+,}")
+    if comparison.bytes_per_minute is not None:
+        table.add_row("Velocity", f"{_fmt_signed_bytes(comparison.bytes_per_minute)}/min")
+    if comparison.bytes_per_record is not None:
+        table.add_row("Per new record", _fmt_signed_bytes(comparison.bytes_per_record))
+    console.print(table)
+
+    if comparison.findings:
+        console.print("\n[bold]Growth findings[/bold]")
+        for finding in comparison.findings:
             console.print(
                 f"[{finding.severity.upper()}] [bold]{finding.code}[/bold] — {finding.message}"
             )
@@ -122,6 +161,45 @@ def inspect(
 
 
 @app.command()
+def snapshot(
+    path: Annotated[Path | None, typer.Argument()] = None,
+    latest: Annotated[bool, typer.Option("--latest")] = False,
+    root: Annotated[Path | None, typer.Option(help="Codex home/search root.")] = None,
+    output: Annotated[
+        Path,
+        typer.Option("-o", "--output", help="Snapshot JSON output path."),
+    ] = Path("cpg-snapshot.json"),
+) -> None:
+    """Capture a portable measurement point for later comparison."""
+    target = _resolve(path, latest, root)
+    measured = analyze_rollout(target)
+    measured.findings = run_detectors(measured)
+    written = write_snapshot_artifact(measured, output)
+    console.print(f"Snapshot written: [bold]{written}[/bold]")
+    console.print(
+        f"Payload {_fmt_bytes(measured.estimated_payload_bytes)} · Risk {measured.risk_label}"
+    )
+
+
+@app.command("compare")
+def compare_command(
+    before: Annotated[Path, typer.Argument(help="Earlier snapshot JSON.")],
+    after: Annotated[Path, typer.Argument(help="Later snapshot JSON.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Emit JSON.")] = False,
+) -> None:
+    """Compare two snapshots and calculate byte-growth velocity."""
+    try:
+        comparison = compare_snapshot_files(before, after)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    if json_output:
+        console.print_json(json.dumps(comparison.to_dict()))
+    else:
+        _render_growth(comparison)
+
+
+@app.command()
 def watch(
     path: Annotated[Path | None, typer.Argument()] = None,
     latest: Annotated[bool, typer.Option("--latest")] = False,
@@ -131,15 +209,24 @@ def watch(
     """Watch a rollout and refresh diagnostics when it changes."""
     target = _resolve(path, latest, root)
     previous_size = -1
+    previous_artifact = None
     try:
         while True:
             size = target.stat().st_size
             if size != previous_size:
+                measured = analyze_rollout(target)
+                measured.findings = run_detectors(measured)
+                current_artifact = make_snapshot_artifact(measured)
+
                 console.clear()
-                snapshot = analyze_rollout(target)
-                snapshot.findings = run_detectors(snapshot)
-                _render(snapshot)
+                _render(measured)
+                if previous_artifact is not None:
+                    growth = compare_artifacts(previous_artifact, current_artifact)
+                    console.print()
+                    _render_growth(growth, title="Growth since previous change")
+
                 console.print(f"\nWatching every {interval:g}s. Ctrl+C to stop.")
+                previous_artifact = current_artifact
                 previous_size = size
             time.sleep(interval)
     except KeyboardInterrupt:
