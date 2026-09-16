@@ -55,7 +55,8 @@ jobs:
           if missing:
               raise SystemExit(f"wheel missing benchmark manifests: {sorted(missing)}")
           PY
+          version="$(python -c 'import codex_payload_guard; print(codex_payload_guard.__version__)')"
           python -m venv package-smoke
           package-smoke/bin/python -m pip install dist/*.whl
-          test "$(package-smoke/bin/cpg --version)" = "codex-payload-guard 0.1.0"
+          test "$(package-smoke/bin/cpg --version)" = "codex-payload-guard ${version}"
           package-smoke/bin/cpg benchmark --profile ci --json > /dev/null
