@@ -29,9 +29,10 @@ jobs:
         run: python -m twine check dist/*
       - name: Smoke test wheel
         run: |
+          version="$(python -c 'import codex_payload_guard; print(codex_payload_guard.__version__)')"
           python -m venv release-smoke
           release-smoke/bin/python -m pip install dist/*.whl
-          test "$(release-smoke/bin/cpg --version)" = "codex-payload-guard 0.1.0"
+          test "$(release-smoke/bin/cpg --version)" = "codex-payload-guard ${version}"
           release-smoke/bin/cpg benchmark --profile ci --json > /dev/null
       - name: Attach distributions to release
         env:
