@@ -19,8 +19,8 @@ jobs:
   full-benchmark:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Install
@@ -30,7 +30,7 @@ jobs:
       - name: Publish benchmark summary
         run: cat benchmark-results/benchmark-results.md >> "$GITHUB_STEP_SUMMARY"
       - name: Upload benchmark evidence artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: benchmark-evidence-${{ github.sha }}
           path: benchmark-results/
@@ -44,7 +44,7 @@ jobs:
       contents: write
     steps:
       - name: Download benchmark evidence artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: benchmark-evidence-${{ github.sha }}
           path: benchmark-results
